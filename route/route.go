@@ -22,6 +22,13 @@ func MainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 //----------------------------------------------------------------------------------------
+type RetMessageCategory struct{
+	Success bool `json:"success"`
+	Message string `json:"message"`
+	DataArr []map[string]interface{} `json:"data,omitempty"`
+	DataNoArr map[string]interface{} `json:"data,omitempty"`
+}
+
 type RetGetMessageCategory struct {
 	Success bool `json:"success"`
 	Message string `json:"message"`
@@ -33,29 +40,21 @@ func returnAllRecipeCategories(w http.ResponseWriter, r *http.Request) {
 
 	var recipeCategory []dbop.RecipeCategory = dbop.GetAllRecipeCategories()
 
-	temp := new(RetGetMessageCategory)
+	temp := new(RetMessageCategory)
 	temp.Success = true
 	temp.Message = "Success"
-	temp.Data = recipeCategory
+
+	var exampleBytes []byte
+	var err error
+	exampleBytes, err = json.Marshal(recipeCategory)
+	if err != nil {
+			print(err)
+			return
+	}
+
+	json.Unmarshal(exampleBytes, &temp.DataArr)
 
 	json.NewEncoder(w).Encode(temp)
-}
-
-type RetInsertMessageCategory struct {
-	Success bool `json:"success"`
-	Message string `json:"message"`
-	Data dbop.RecipeCategory `json:"data,omitempty"`
-}
-
-type RetSuccessInsertUpdateMessageCategory struct{
-	Success bool `json:"success"`
-	Message string `json:"message"`
-	Data dbop.RecipeCategory `json:"data,omitempty"`
-}
-
-type RetFailedInsertUpdateMessageCategory struct{
-	Success bool `json:"success"`
-	Message string `json:"message"`
 }
 
 func createNewRecipeCategories(w http.ResponseWriter, r *http.Request) {
@@ -69,10 +68,9 @@ func createNewRecipeCategories(w http.ResponseWriter, r *http.Request) {
 	if(reqBody == nil || mappedReqBody["name"] == "" || err != nil){
 		w.WriteHeader(http.StatusBadRequest)
 
-		temp := new(RetFailedInsertUpdateMessageCategory)
+		temp := new(RetMessageCategory)
 		temp.Success = false
 		temp.Message = "Name is required"
-		//temp.Data = nil
 
 		json.NewEncoder(w).Encode(temp)
 	}else{
@@ -88,11 +86,6 @@ func createNewRecipeCategories(w http.ResponseWriter, r *http.Request) {
 		enhanceReqBody.CreatedAt = string(time.Now().Format(time.RFC3339))
 		enhanceReqBody.UpdatedAt = string(time.Now().Format(time.RFC3339))
 
-		// fmt.Print(string(reqBody))
-		// fmt.Print(createdAt)
-		// fmt.Print(mappedReqBody["name"])
-		//marshalledNewReqBody = json.Marshaler(enhanceReqBody)
-
 		reqBodyBytes := new(bytes.Buffer)
 		json.NewEncoder(reqBodyBytes).Encode(enhanceReqBody)
 
@@ -102,7 +95,7 @@ func createNewRecipeCategories(w http.ResponseWriter, r *http.Request) {
 		if (dbop.RecipeCategory{}) == recipeCategory {
 			w.WriteHeader(http.StatusBadRequest)
 
-			temp := new(RetFailedInsertUpdateMessageCategory)
+			temp := new(RetMessageCategory)
 			temp.Success = false
 			temp.Message = "Error on inserting data"
 
@@ -111,10 +104,14 @@ func createNewRecipeCategories(w http.ResponseWriter, r *http.Request) {
 
 			w.WriteHeader(http.StatusOK)
 
-			temp := new(RetSuccessInsertUpdateMessageCategory)
+			temp := new(RetMessageCategory)
 			temp.Success = true
 			temp.Message = "Success"
-			temp.Data = recipeCategory
+
+			exampleBytes, _ := json.Marshal(recipeCategory)
+			json.Unmarshal(exampleBytes, &temp.DataNoArr)
+
+			fmt.Printf("%+v",temp)
 
 			json.NewEncoder(w).Encode(temp)
 		}
@@ -133,10 +130,9 @@ func updateRecipeCategory(w http.ResponseWriter, r *http.Request) {
 	if(reqBody == nil || mappedReqBody["name"] == "" || err != nil){
 		w.WriteHeader(http.StatusBadRequest)
 
-		temp := new(RetFailedInsertUpdateMessageCategory)
+		temp := new(RetMessageCategory)
 		temp.Success = false
 		temp.Message = "Name is required"
-		//temp.Data = nil
 
 		json.NewEncoder(w).Encode(temp)
 	}else{
@@ -146,10 +142,9 @@ func updateRecipeCategory(w http.ResponseWriter, r *http.Request) {
 			//error
 			w.WriteHeader(http.StatusBadRequest)
 
-			temp := new(RetFailedInsertUpdateMessageCategory)
+			temp := new(RetMessageCategory)
 			temp.Success = false
 			temp.Message = "Recipe Category with id "+key+" not found"
-			//temp.Data = nil
 
 			json.NewEncoder(w).Encode(temp)
 		}else{
@@ -170,10 +165,18 @@ func updateRecipeCategory(w http.ResponseWriter, r *http.Request) {
 			updateRes := dbop.UpdateRecipeCategory(reqBodyBytes.Bytes(), idCheckRes)
 
 			w.WriteHeader(http.StatusOK)
-			temp := new(RetSuccessInsertUpdateMessageCategory)
+			temp := new(RetMessageCategory)
 			temp.Success = true
 			temp.Message = "Success"
-			temp.Data = updateRes
+
+			var exampleBytes []byte
+			var err error
+			exampleBytes, err = json.Marshal(updateRes)
+			if err != nil {
+					print(err)
+					return
+			}
+			json.Unmarshal([]byte(exampleBytes), &temp.DataNoArr)
 
 			json.NewEncoder(w).Encode(temp)
 		}
@@ -191,7 +194,7 @@ func deleteRecipeCategory(w http.ResponseWriter, r *http.Request){
 		//error
 		w.WriteHeader(http.StatusBadRequest)
 
-		temp := new(RetFailedInsertUpdateMessageCategory)
+		temp := new(RetMessageCategory)
 		temp.Success = false
 		temp.Message = "Recipe Category with id "+key+" not found"
 
@@ -201,7 +204,7 @@ func deleteRecipeCategory(w http.ResponseWriter, r *http.Request){
 
 		if(deleteRes == true){
 			w.WriteHeader(http.StatusOK)
-			temp := new(RetFailedInsertUpdateMessageCategory)
+			temp := new(RetMessageCategory)
 			temp.Success = true
 			temp.Message = "Success"
 
